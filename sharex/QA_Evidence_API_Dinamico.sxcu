@@ -1,0 +1,16 @@
+{
+  "Version": "18.0.1",
+  "Name": "QA Evidence API (Dinámico)",
+  "DestinationType": "ImageUploader",
+  "RequestMethod": "POST",
+  "RequestURL": "http://127.0.0.1:8000/evidences",
+  "Body": "MultipartFormData",
+  "Arguments": {
+    "testId": "$input:Ingrese el ID del caso de prueba (ej: TC001_Login)$",
+    "step": "$input:Describa el paso o evidencia (ej: Ingreso correcto de usuario)$",
+    "file": "{input}"
+  },
+  "ResponseType": "Text",
+  "FileFormName": "file",
+  "URL": "$json:docx_path$"
+}

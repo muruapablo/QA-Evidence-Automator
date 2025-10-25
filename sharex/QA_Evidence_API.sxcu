@@ -1,0 +1,16 @@
+{
+  "Version": "13.7.0",
+  "Name": "QA Evidence API",
+  "DestinationType": "ImageUploader",
+  "RequestMethod": "POST",
+  "RequestURL": "http://127.0.0.1:8000/evidences",
+  "Body": "MultipartFormData",
+  "Arguments": {
+    "testId": "TC001_Login",
+    "step": "Ingreso correcto con credenciales válidas",
+    "file": "{input}"
+  },
+  "ResponseType": "Text",
+  "URL": "$json:docx_path$",
+  "FileFormName": "file"
+}
