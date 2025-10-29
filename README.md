@@ -1,5 +1,5 @@
 ![EviQA Banner](banner.png)
-# 📊 QA Evidence Automator - RESUMEN COMPLETO
+#  QA Evidence Automator - RESUMEN COMPLETO
 
 ## 🎯 ¿Qué incluye ahora?
 
