@@ -43,7 +43,7 @@
 ### **1. Instalación** (si es primera vez)
 ```bash
 # Clonar repositorio
-git clone <tu-repo>
+git clone <URL-del-repo>
 cd QA-Evidence-Automator
 
 # Crear entorno virtual
