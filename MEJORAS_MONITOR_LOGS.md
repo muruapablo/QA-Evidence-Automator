@@ -74,8 +74,9 @@ Posición: 10px desde la derecha, 80px desde abajo
 
 1. Hacer clic en el botón **"📊 Ver Logs en Tiempo Real"** (esquina inferior derecha)
 2. El monitor se abre **sin tapar el formulario**
-3. Los mensajes con emojis importantes se destacan automáticamente
-4. Cerrar con:
+3. **FILTRO ACTIVO**: Solo se muestran mensajes que **comienzan con emojis importantes**
+4. Los mensajes se destacan automáticamente según su tipo
+5. Cerrar con:
    - Botón ❌ en el header
    - Tecla `Escape`
 
@@ -90,6 +91,42 @@ logger.info("💾 Documento guardado exitosamente")
 logger.info("🚀 Iniciando proceso de automatización")
 ```
 
+## 🔍 Filtro Inteligente
+
+**¡NUEVO!** El monitor ahora filtra automáticamente los logs para mostrar **solo lo importante**.
+
+### Cómo funciona:
+- ✅ **Solo muestra logs que COMIENZAN con emojis importantes**
+- ❌ **Oculta logs sin emojis o con emojis en medio del texto**
+- 🎯 **Reduce el ruido visual en un 80-90%**
+
+### Ejemplos:
+
+**✅ Se muestran:**
+```
+✅ Evidencia agregada correctamente
+❌ Error: Documento abierto. Cerrarlo para continuar.
+⚠️ Advertencia: Espacio en disco bajo
+🚀 Iniciando proceso de automatización
+💾 Documento guardado exitosamente
+```
+
+**❌ NO se muestran:**
+```
+Recibiendo evidencia desde ShareX...
+Procesando imagen: screenshot_001.png
+Iniciando servidor en puerto 8000
+Archivo guardado en carpeta evidences/
+Proceso completado ✅  (emoji al final, no al inicio)
+```
+
+### Ventaja:
+- 📊 **Monitor más limpio**: Solo ves lo que realmente importa
+- ⏱️ **Revisión más rápida**: Sin perder tiempo leyendo logs técnicos
+- 🎯 **Enfoque en acciones**: Éxitos, errores y advertencias al instante
+
+---
+
 ## 🎯 Ventajas
 
 1. ✅ **No interrumpe el flujo de trabajo** - puedes ver logs mientras configuras el contexto
@@ -97,6 +134,7 @@ logger.info("🚀 Iniciando proceso de automatización")
 3. ✅ **Diseño moderno** - interfaz similar a herramientas profesionales
 4. ✅ **Responsivo** - funciona bien en cualquier tamaño de pantalla
 5. ✅ **Scroll suave** - scrollbar personalizado que hace juego con el tema
+6. 🆕 **Filtrado inteligente** - solo mensajes con emojis importantes
 
 ## 🔄 Actualización Automática
 

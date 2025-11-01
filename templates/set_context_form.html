@@ -447,6 +447,9 @@
             </div>
             <div class="modal-body">
                 <div class="log-container" id="logContainer">
+                    <div class="log-entry INFO" style="border-left-color: #667eea; background: #2a2a3e;">
+                        <span class="log-message" style="font-weight: bold;">🔍 Mostrando solo mensajes importantes que comienzan con emojis</span>
+                    </div>
                     <div class="log-entry INFO">
                         <span class="log-timestamp">[Cargando...]</span>
                         <span class="log-level INFO">INFO</span>
@@ -457,7 +460,7 @@
             <div class="log-controls">
                 <div class="log-status">
                     <div class="live-indicator"></div>
-                    <span>En vivo</span>
+                    <span>Solo con emojis</span>
                 </div>
                 <button class="btn-clear" onclick="clearLogs()">Limpiar Logs</button>
             </div>
@@ -575,6 +578,15 @@
         function addLogEntry(log) {
             const container = document.getElementById('logContainer');
             
+            // FILTRO: Solo mostrar logs que COMIENZAN con emojis importantes
+            const importantEmojis = ['✅', '❌', '⚠️', '🎯', '📝', '💾', '🚀', '⏰', '🔍'];
+            const startsWithEmoji = importantEmojis.some(emoji => log.message.trim().startsWith(emoji));
+            
+            // Si el log NO comienza con un emoji importante, ignorarlo
+            if (!startsWithEmoji) {
+                return; // No agregar este log al contenedor
+            }
+            
             // Limitar número de logs mostrados
             while (container.children.length >= maxLogs) {
                 container.removeChild(container.firstChild);
@@ -583,9 +595,8 @@
             const entry = document.createElement('div');
             entry.className = `log-entry ${log.level}`;
             
-            // Detectar mensajes importantes con emojis
-            const importantEmojis = ['✅', '❌', '⚠️', '🎯', '📝', '💾', '🚀', '⏰', '🔍'];
-            const hasImportantEmoji = importantEmojis.some(emoji => log.message.includes(emoji));
+            // Detectar tipo de emoji para destacado
+            const hasImportantEmoji = true; // Ya sabemos que comienza con emoji
             
             if (hasImportantEmoji) {
                 entry.classList.add('important');

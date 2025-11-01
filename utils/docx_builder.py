@@ -3,6 +3,7 @@ from docx.shared import Inches
 from pathlib import Path
 
 def add_image_to_docx(docx_path, image_path, template_path, step_desc=""):
+    print(f"DEBUG: Processing DOCX at: {docx_path}") # DEBUG PRINT
     docx_file = Path(docx_path)
     if docx_file.exists():
         document = Document(docx_path)
