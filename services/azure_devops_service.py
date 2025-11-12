@@ -327,12 +327,26 @@ class AzureDevOpsService:
                 f"testplan/Plans/{plan_id}/Suites/{suite_id}/TestCase"
             )
 
-            logger.info(f"Respuesta de API para test cases: {response}")
+            # SIEMPRE mostrar la respuesta completa (INFO level, no DEBUG)
+            logger.info("=" * 80)
+            logger.info(f"RESPONSE COMPLETA de /testplan/Plans/{plan_id}/Suites/{suite_id}/TestCase:")
+            logger.info(f"Tipo: {type(response)}")
+            logger.info(f"Keys disponibles: {response.keys() if isinstance(response, dict) else 'N/A'}")
+            logger.info(f"Contenido completo: {response}")
+            logger.info("=" * 80)
+
+            # Verificar si hay datos en "value"
+            value_array = response.get("value", [])
+            logger.info(f"Array 'value' tiene {len(value_array)} elementos")
 
             test_cases = []
-            for tc_data in response.get("value", []):
+            for idx, tc_data in enumerate(value_array):
                 try:
-                    logger.info(f"Datos de test case individual: {tc_data}")
+                    logger.info("-" * 60)
+                    logger.info(f"Test Case #{idx + 1}:")
+                    logger.info(f"  Tipo: {type(tc_data)}")
+                    logger.info(f"  Keys: {tc_data.keys() if isinstance(tc_data, dict) else 'N/A'}")
+                    logger.info(f"  Contenido: {tc_data}")
 
                     # Obtener detalles completos del test case (con pasos)
                     # Intentar diferentes estructuras (cloud vs on-premise)
@@ -341,24 +355,36 @@ class AzureDevOpsService:
                     # Estructura cloud: {"testCase": {"id": 123}}
                     if "testCase" in tc_data:
                         tc_id = tc_data.get("testCase", {}).get("id")
+                        logger.info(f"  ✓ Encontrado ID en testCase: {tc_id}")
                     # Estructura on-premise: {"workItem": {"id": 123}}
                     elif "workItem" in tc_data:
                         tc_id = tc_data.get("workItem", {}).get("id")
+                        logger.info(f"  ✓ Encontrado ID en workItem: {tc_id}")
                     # Estructura directa: {"id": 123}
                     elif "id" in tc_data:
                         tc_id = tc_data.get("id")
-
-                    logger.info(f"ID extraído del test case: {tc_id}")
+                        logger.info(f"  ✓ Encontrado ID directo: {tc_id}")
+                    else:
+                        logger.warning(f"  ✗ NO se pudo extraer ID. Keys disponibles: {list(tc_data.keys())}")
 
                     if tc_id:
+                        logger.info(f"  → Obteniendo detalles del test case {tc_id}...")
                         full_test_case = self.get_test_case(tc_id)
                         if full_test_case:
                             test_cases.append(full_test_case)
+                            logger.info(f"  ✓ Test case {tc_id} agregado exitosamente")
+                        else:
+                            logger.warning(f"  ✗ get_test_case({tc_id}) retornó None")
+                    else:
+                        logger.warning(f"  ✗ tc_id es None, no se puede obtener detalles")
+
                 except Exception as e:
-                    logger.warning(f"Error obteniendo test case: {e}")
+                    logger.error(f"  ✗ Error procesando test case #{idx + 1}: {e}", exc_info=True)
                     continue
 
-            logger.info(f"Se obtuvieron {len(test_cases)} test cases del suite {suite_id}")
+            logger.info("=" * 80)
+            logger.info(f"RESULTADO FINAL: {len(test_cases)} test cases obtenidos del suite {suite_id}")
+            logger.info("=" * 80)
             return test_cases
 
         except AzureDevOpsError:
