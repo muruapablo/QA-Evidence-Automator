@@ -281,6 +281,216 @@
         input[type="submit"]:hover {
             background-color: #218838;
         }
+
+        /* Azure DevOps Button Styles */
+        .azure-button {
+            background-color: #0078d4;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .azure-button:hover {
+            background-color: #005a9e;
+        }
+
+        .azure-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            margin: 5% auto;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 80%;
+            max-width: 700px;
+            box-shadow: 0 4px 6px var(--shadow);
+            animation: slideDown 0.3s;
+        }
+
+        .close {
+            color: var(--text-secondary);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #f44336;
+        }
+
+        .modal h2 {
+            color: var(--text-primary);
+            margin-top: 0;
+        }
+
+        .select-group {
+            margin-bottom: 20px;
+        }
+
+        .select-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: bold;
+        }
+
+        .select-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .select-group select:disabled {
+            background-color: var(--bg-primary);
+            opacity: 0.6;
+        }
+
+        .loading {
+            display: inline-block;
+            margin-left: 10px;
+            color: var(--text-secondary);
+        }
+
+        .test-case-preview {
+            background-color: var(--info-bg);
+            border: 1px solid var(--info-border);
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .test-case-preview h4 {
+            margin-top: 0;
+            color: var(--info-accent);
+        }
+
+        .test-case-preview p {
+            margin: 8px 0;
+            color: var(--text-primary);
+        }
+
+        .test-case-preview .steps-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        .test-case-preview .steps-list li {
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background-color: #0078d4;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #005a9e;
+        }
+
+        .btn-primary:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background-color: var(--border-color);
+        }
+
+        .divider::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background-color: var(--border-color);
+        }
+
+        .divider span {
+            background-color: var(--bg-secondary);
+            padding: 0 15px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
         
         .message {
             margin-bottom: 20px;
@@ -400,7 +610,68 @@
         {% if notification_html %}
             {{ notification_html | safe }}
         {% endif %}
-        
+
+        <!-- Azure DevOps Integration Button -->
+        <button type="button" class="azure-button" id="azureButton" onclick="openAzureModal()">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M15 2.5L10.5 0v3.5L3.484 1.984 0 3.5V12l3.484 1.516L10.5 12v3.5L15 13.5V2.5zM9 11.133L3.484 12.5 1.5 11.633V4.367l1.984.867L9 3.867v7.266z"/>
+            </svg>
+            <span>Cargar desde Azure DevOps</span>
+        </button>
+
+        <div class="divider">
+            <span>o ingresa manualmente</span>
+        </div>
+
+        <!-- Azure DevOps Modal -->
+        <div id="azureModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeAzureModal()">&times;</span>
+                <h2>🔵 Seleccionar Test Case desde Azure DevOps</h2>
+
+                <div class="select-group">
+                    <label for="testPlanSelect">Test Plan:</label>
+                    <select id="testPlanSelect" onchange="loadTestSuites()">
+                        <option value="">Seleccione un Test Plan...</option>
+                    </select>
+                    <span id="plansLoading" class="loading" style="display:none;">Cargando...</span>
+                </div>
+
+                <div class="select-group">
+                    <label for="testSuiteSelect">Test Suite:</label>
+                    <select id="testSuiteSelect" onchange="loadTestCases()" disabled>
+                        <option value="">Seleccione un Test Suite...</option>
+                    </select>
+                    <span id="suitesLoading" class="loading" style="display:none;">Cargando...</span>
+                </div>
+
+                <div class="select-group">
+                    <label for="testCaseSelect">Test Case:</label>
+                    <select id="testCaseSelect" onchange="loadTestCaseDetails()" disabled>
+                        <option value="">Seleccione un Test Case...</option>
+                    </select>
+                    <span id="casesLoading" class="loading" style="display:none;">Cargando...</span>
+                </div>
+
+                <div id="testCasePreview" class="test-case-preview">
+                    <h4 id="previewTitle"></h4>
+                    <p><strong>ID:</strong> <span id="previewId"></span></p>
+                    <p><strong>Estado:</strong> <span id="previewState"></span></p>
+                    <p><strong>Prioridad:</strong> <span id="previewPriority"></span></p>
+                    <p><strong>Descripción:</strong></p>
+                    <p id="previewDescription"></p>
+                    <div id="previewSteps"></div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeAzureModal()">Cancelar</button>
+                    <button type="button" class="btn-primary" id="importButton" onclick="importTestCase()" disabled>
+                        Importar Test Case
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <form id="contextForm" action="/set_context" method="post">
             <label for="testId">ID del Caso de Prueba:</label>
             <input 
@@ -572,6 +843,249 @@
                 icon.classList.add('collapsed');
             }
         })();
+
+        // ==== AZURE DEVOPS INTEGRATION ====
+        let selectedTestCaseId = null;
+
+        // Check Azure DevOps status on load
+        (async function checkAzureStatus() {
+            try {
+                const response = await fetch('/azure/status');
+                const data = await response.json();
+
+                const azureButton = document.getElementById('azureButton');
+
+                if (!data.enabled || !data.configured) {
+                    azureButton.disabled = true;
+                    azureButton.querySelector('span').textContent = 'Azure DevOps no configurado';
+                } else if (!data.connected) {
+                    azureButton.disabled = true;
+                    azureButton.querySelector('span').textContent = 'Azure DevOps - Error de conexión';
+                }
+            } catch (error) {
+                console.error('Error verificando estado de Azure DevOps:', error);
+                document.getElementById('azureButton').disabled = true;
+            }
+        })();
+
+        function openAzureModal() {
+            document.getElementById('azureModal').style.display = 'block';
+            loadTestPlans();
+        }
+
+        function closeAzureModal() {
+            document.getElementById('azureModal').style.display = 'none';
+            resetModal();
+        }
+
+        function resetModal() {
+            selectedTestCaseId = null;
+            document.getElementById('testPlanSelect').value = '';
+            document.getElementById('testSuiteSelect').innerHTML = '<option value="">Seleccione un Test Suite...</option>';
+            document.getElementById('testSuiteSelect').disabled = true;
+            document.getElementById('testCaseSelect').innerHTML = '<option value="">Seleccione un Test Case...</option>';
+            document.getElementById('testCaseSelect').disabled = true;
+            document.getElementById('testCasePreview').style.display = 'none';
+            document.getElementById('importButton').disabled = true;
+        }
+
+        async function loadTestPlans() {
+            const select = document.getElementById('testPlanSelect');
+            const loading = document.getElementById('plansLoading');
+
+            try {
+                loading.style.display = 'inline-block';
+                select.innerHTML = '<option value="">Cargando...</option>';
+
+                const response = await fetch('/azure/test-plans');
+                const data = await response.json();
+
+                select.innerHTML = '<option value="">Seleccione un Test Plan...</option>';
+
+                if (data.plans && data.plans.length > 0) {
+                    data.plans.forEach(plan => {
+                        const option = document.createElement('option');
+                        option.value = plan.id;
+                        option.textContent = `${plan.name} (${plan.state})`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No hay Test Plans disponibles</option>';
+                }
+            } catch (error) {
+                console.error('Error cargando test plans:', error);
+                select.innerHTML = '<option value="">Error al cargar test plans</option>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function loadTestSuites() {
+            const planId = document.getElementById('testPlanSelect').value;
+            const select = document.getElementById('testSuiteSelect');
+            const loading = document.getElementById('suitesLoading');
+
+            // Reset downstream selects
+            document.getElementById('testCaseSelect').innerHTML = '<option value="">Seleccione un Test Case...</option>';
+            document.getElementById('testCaseSelect').disabled = true;
+            document.getElementById('testCasePreview').style.display = 'none';
+            document.getElementById('importButton').disabled = true;
+
+            if (!planId) {
+                select.disabled = true;
+                return;
+            }
+
+            try {
+                loading.style.display = 'inline-block';
+                select.innerHTML = '<option value="">Cargando...</option>';
+                select.disabled = false;
+
+                const response = await fetch(`/azure/test-suites/${planId}`);
+                const data = await response.json();
+
+                select.innerHTML = '<option value="">Seleccione un Test Suite...</option>';
+
+                if (data.suites && data.suites.length > 0) {
+                    data.suites.forEach(suite => {
+                        const option = document.createElement('option');
+                        option.value = suite.id;
+                        option.dataset.planId = planId;
+                        option.textContent = `${suite.name} (${suite.test_case_count} casos)`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No hay Test Suites disponibles</option>';
+                }
+            } catch (error) {
+                console.error('Error cargando test suites:', error);
+                select.innerHTML = '<option value="">Error al cargar test suites</option>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function loadTestCases() {
+            const suiteSelect = document.getElementById('testSuiteSelect');
+            const suiteId = suiteSelect.value;
+            const planId = suiteSelect.options[suiteSelect.selectedIndex].dataset.planId;
+            const select = document.getElementById('testCaseSelect');
+            const loading = document.getElementById('casesLoading');
+
+            // Reset preview
+            document.getElementById('testCasePreview').style.display = 'none';
+            document.getElementById('importButton').disabled = true;
+
+            if (!suiteId || !planId) {
+                select.disabled = true;
+                return;
+            }
+
+            try {
+                loading.style.display = 'inline-block';
+                select.innerHTML = '<option value="">Cargando...</option>';
+                select.disabled = false;
+
+                const response = await fetch(`/azure/test-cases/${planId}/${suiteId}`);
+                const data = await response.json();
+
+                select.innerHTML = '<option value="">Seleccione un Test Case...</option>';
+
+                if (data.test_cases && data.test_cases.length > 0) {
+                    data.test_cases.forEach(tc => {
+                        const option = document.createElement('option');
+                        option.value = tc.id;
+                        option.textContent = `${tc.id}: ${tc.title} [${tc.state}]`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No hay Test Cases disponibles</option>';
+                }
+            } catch (error) {
+                console.error('Error cargando test cases:', error);
+                select.innerHTML = '<option value="">Error al cargar test cases</option>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function loadTestCaseDetails() {
+            const testCaseId = document.getElementById('testCaseSelect').value;
+            const preview = document.getElementById('testCasePreview');
+
+            if (!testCaseId) {
+                preview.style.display = 'none';
+                document.getElementById('importButton').disabled = true;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/azure/test-case/${testCaseId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error al cargar test case: ' + data.error);
+                    return;
+                }
+
+                // Update preview
+                document.getElementById('previewTitle').textContent = data.title;
+                document.getElementById('previewId').textContent = data.id;
+                document.getElementById('previewState').textContent = data.state;
+                document.getElementById('previewPriority').textContent = data.priority;
+                document.getElementById('previewDescription').textContent = data.description || 'Sin descripción';
+
+                // Show steps
+                const stepsDiv = document.getElementById('previewSteps');
+                if (data.steps && data.steps.length > 0) {
+                    let stepsHtml = '<p><strong>Pasos de Prueba:</strong></p><ol class="steps-list">';
+                    data.steps.forEach(step => {
+                        stepsHtml += `<li><strong>Acción:</strong> ${step.action}<br><strong>Resultado Esperado:</strong> ${step.expected_result}</li>`;
+                    });
+                    stepsHtml += '</ol>';
+                    stepsDiv.innerHTML = stepsHtml;
+                } else {
+                    stepsDiv.innerHTML = '<p><em>Sin pasos definidos</em></p>';
+                }
+
+                preview.style.display = 'block';
+                selectedTestCaseId = testCaseId;
+                document.getElementById('importButton').disabled = false;
+
+            } catch (error) {
+                console.error('Error cargando detalles del test case:', error);
+                alert('Error al cargar detalles del test case');
+            }
+        }
+
+        function importTestCase() {
+            if (!selectedTestCaseId) {
+                alert('Por favor seleccione un test case');
+                return;
+            }
+
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/set_context_from_azure';
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'test_case_id';
+            input.value = selectedTestCaseId;
+
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('azureModal');
+            if (event.target === modal) {
+                closeAzureModal();
+            }
+        }
     </script>
 </body>
 </html>

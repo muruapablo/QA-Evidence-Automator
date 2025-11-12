@@ -14,6 +14,19 @@ import asyncio
 import queue
 import json
 from winotify import Notification, audio
+from dotenv import load_dotenv
+import os
+
+# Cargar variables de entorno desde .env
+load_dotenv()
+
+# Importar servicios de Azure DevOps si está habilitado
+from services.azure_devops_service import (
+    get_azure_service,
+    is_azure_devops_enabled,
+    AzureDevOpsError
+)
+from models.test_case import TestCase, TestSuite, TestPlan
 
 # Configurar logging
 logger = logging.getLogger("uvicorn.error")
@@ -342,7 +355,7 @@ async def get_recent_logs():
     """Obtiene los últimos logs almacenados."""
     logs = []
     temp_queue = queue.Queue()
-    
+
     while not log_queue.empty():
         try:
             log = log_queue.get_nowait()
@@ -350,11 +363,394 @@ async def get_recent_logs():
             temp_queue.put(log)
         except queue.Empty:
             break
-    
+
     while not temp_queue.empty():
         try:
             log_queue.put_nowait(temp_queue.get_nowait())
         except queue.Full:
             break
-    
+
     return JSONResponse({"logs": logs[-50:]})
+
+
+# ============================================
+# AZURE DEVOPS ENDPOINTS
+# ============================================
+
+@app.get("/azure/status")
+async def azure_status():
+    """
+    Verifica el estado de la integración con Azure DevOps
+
+    Returns:
+        JSON con estado de la conexión y configuración
+    """
+    enabled = is_azure_devops_enabled()
+
+    if not enabled:
+        return JSONResponse({
+            "enabled": False,
+            "message": "Integración con Azure DevOps deshabilitada o no configurada",
+            "configured": False
+        })
+
+    # Verificar conexión
+    azure_service = get_azure_service()
+
+    if azure_service is None:
+        return JSONResponse({
+            "enabled": True,
+            "configured": False,
+            "message": "Faltan variables de entorno para Azure DevOps"
+        })
+
+    # Probar conexión
+    connection_ok = azure_service.test_connection()
+
+    return JSONResponse({
+        "enabled": True,
+        "configured": True,
+        "connected": connection_ok,
+        "organization": azure_service.organization,
+        "project": azure_service.project,
+        "message": "Conectado correctamente" if connection_ok else "Error de conexión"
+    })
+
+
+@app.get("/azure/test-plans")
+async def get_test_plans():
+    """
+    Obtiene todos los Test Plans del proyecto de Azure DevOps
+
+    Returns:
+        JSON con lista de test plans
+    """
+    if not is_azure_devops_enabled():
+        return JSONResponse(
+            {"error": "Azure DevOps no está habilitado"},
+            status_code=503
+        )
+
+    azure_service = get_azure_service()
+
+    if azure_service is None:
+        return JSONResponse(
+            {"error": "Azure DevOps no está configurado"},
+            status_code=503
+        )
+
+    try:
+        test_plans = azure_service.get_test_plans()
+
+        return JSONResponse({
+            "count": len(test_plans),
+            "plans": [
+                {
+                    "id": plan.id,
+                    "name": plan.name,
+                    "state": plan.state,
+                    "description": plan.description
+                }
+                for plan in test_plans
+            ]
+        })
+
+    except AzureDevOpsError as e:
+        logger.error(f"Error obteniendo test plans: {e}")
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500
+        )
+
+
+@app.get("/azure/test-suites/{plan_id}")
+async def get_test_suites(plan_id: int):
+    """
+    Obtiene todos los Test Suites de un Test Plan
+
+    Args:
+        plan_id: ID del test plan
+
+    Returns:
+        JSON con lista de test suites
+    """
+    if not is_azure_devops_enabled():
+        return JSONResponse(
+            {"error": "Azure DevOps no está habilitado"},
+            status_code=503
+        )
+
+    azure_service = get_azure_service()
+
+    if azure_service is None:
+        return JSONResponse(
+            {"error": "Azure DevOps no está configurado"},
+            status_code=503
+        )
+
+    try:
+        test_suites = azure_service.get_test_suites(plan_id)
+
+        return JSONResponse({
+            "plan_id": plan_id,
+            "count": len(test_suites),
+            "suites": [
+                {
+                    "id": suite.id,
+                    "name": suite.name,
+                    "test_case_count": suite.test_case_count
+                }
+                for suite in test_suites
+            ]
+        })
+
+    except AzureDevOpsError as e:
+        logger.error(f"Error obteniendo test suites: {e}")
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500
+        )
+
+
+@app.get("/azure/test-cases/{plan_id}/{suite_id}")
+async def get_test_cases(plan_id: int, suite_id: int):
+    """
+    Obtiene todos los Test Cases de un Test Suite
+
+    Args:
+        plan_id: ID del test plan
+        suite_id: ID del test suite
+
+    Returns:
+        JSON con lista de test cases (información básica)
+    """
+    if not is_azure_devops_enabled():
+        return JSONResponse(
+            {"error": "Azure DevOps no está habilitado"},
+            status_code=503
+        )
+
+    azure_service = get_azure_service()
+
+    if azure_service is None:
+        return JSONResponse(
+            {"error": "Azure DevOps no está configurado"},
+            status_code=503
+        )
+
+    try:
+        test_cases = azure_service.get_test_cases_from_suite(plan_id, suite_id)
+
+        return JSONResponse({
+            "plan_id": plan_id,
+            "suite_id": suite_id,
+            "count": len(test_cases),
+            "test_cases": [
+                {
+                    "id": tc.id,
+                    "title": tc.title,
+                    "state": tc.state,
+                    "priority": tc.priority,
+                    "step_count": len(tc.steps)
+                }
+                for tc in test_cases
+            ]
+        })
+
+    except AzureDevOpsError as e:
+        logger.error(f"Error obteniendo test cases: {e}")
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500
+        )
+
+
+@app.get("/azure/test-case/{test_case_id}")
+async def get_test_case_details(test_case_id: int):
+    """
+    Obtiene los detalles completos de un Test Case
+
+    Args:
+        test_case_id: ID del test case
+
+    Returns:
+        JSON con todos los detalles del test case
+    """
+    if not is_azure_devops_enabled():
+        return JSONResponse(
+            {"error": "Azure DevOps no está habilitado"},
+            status_code=503
+        )
+
+    azure_service = get_azure_service()
+
+    if azure_service is None:
+        return JSONResponse(
+            {"error": "Azure DevOps no está configurado"},
+            status_code=503
+        )
+
+    try:
+        test_case = azure_service.get_test_case(test_case_id)
+
+        if test_case is None:
+            return JSONResponse(
+                {"error": f"Test case {test_case_id} no encontrado"},
+                status_code=404
+            )
+
+        return JSONResponse({
+            "id": test_case.id,
+            "title": test_case.title,
+            "description": test_case.description,
+            "state": test_case.state,
+            "priority": test_case.priority,
+            "assigned_to": test_case.assigned_to,
+            "tags": test_case.tags,
+            "steps": [
+                {
+                    "index": step.index,
+                    "action": step.action,
+                    "expected_result": step.expected_result
+                }
+                for step in test_case.steps
+            ],
+            "context_preview": test_case.to_context_dict()
+        })
+
+    except AzureDevOpsError as e:
+        logger.error(f"Error obteniendo test case: {e}")
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500
+        )
+
+
+@app.post("/set_context_from_azure")
+async def set_context_from_azure(test_case_id: int = Form(...)):
+    """
+    Crea un contexto de prueba desde un Test Case de Azure DevOps
+
+    Args:
+        test_case_id: ID del test case de Azure DevOps
+
+    Returns:
+        Redirección al formulario con el contexto configurado
+    """
+    global current_test_context
+
+    if not is_azure_devops_enabled():
+        error_message = "Azure DevOps no está habilitado"
+        encoded_error = urllib.parse.quote(error_message)
+        return RedirectResponse(
+            url=f"/set_context_form?notification_message={encoded_error}&success=false",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    azure_service = get_azure_service()
+
+    if azure_service is None:
+        error_message = "Azure DevOps no está configurado"
+        encoded_error = urllib.parse.quote(error_message)
+        return RedirectResponse(
+            url=f"/set_context_form?notification_message={encoded_error}&success=false",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    try:
+        # Obtener test case desde Azure DevOps
+        test_case = azure_service.get_test_case(test_case_id)
+
+        if test_case is None:
+            error_message = f"Test case {test_case_id} no encontrado en Azure DevOps"
+            encoded_error = urllib.parse.quote(error_message)
+            return RedirectResponse(
+                url=f"/set_context_form?notification_message={encoded_error}&success=false",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+
+        # Convertir a contexto
+        context = test_case.to_context_dict()
+
+        # Actualizar contexto global
+        current_test_context["testId"] = context["testId"]
+        current_test_context["step"] = context["step"]
+        current_test_context["description"] = context["description"]
+
+        # Crear carpeta y documento
+        sanitized_testId = sanitize_filename(context["testId"])
+        test_folder = EVIDENCE_DIR / sanitized_testId
+        test_folder.mkdir(exist_ok=True)
+        docx_path = test_folder / f"{sanitized_testId}_evidence.docx"
+
+        # Agregar tabla con información del test case
+        add_step_table(
+            str(docx_path),
+            str(TEMPLATE_PATH),
+            context["step"],
+            sanitized_testId,
+            context["description"]
+        )
+
+        success_message = f"✅ Test Case cargado desde Azure DevOps: {test_case.title}"
+        logger.info(f"✅ Test case {test_case_id} cargado desde Azure DevOps")
+
+        send_windows_notification(
+            "Test Case Importado ✅",
+            f"TC{test_case.id}: {test_case.title[:50]}...",
+            duration="short"
+        )
+
+        encoded_message = urllib.parse.quote(success_message)
+        return RedirectResponse(
+            url=f"/set_context_form?notification_message={encoded_message}&success=true",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    except PermissionError:
+        error_message = "❌ Error: Documento abierto. Cerrarlo para continuar."
+        logger.error(f"❌ Documento bloqueado al importar desde Azure")
+
+        send_windows_notification(
+            "Error - Documento Bloqueado ❌",
+            "El documento está abierto.\nCiérralo para continuar.",
+            duration="long"
+        )
+
+        encoded_error = urllib.parse.quote(error_message)
+        return RedirectResponse(
+            url=f"/set_context_form?notification_message={encoded_error}&success=false",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    except AzureDevOpsError as e:
+        error_message = f"❌ Error de Azure DevOps: {str(e)}"
+        logger.error(error_message)
+
+        send_windows_notification(
+            "Error Azure DevOps ❌",
+            str(e)[:100],
+            duration="long"
+        )
+
+        encoded_error = urllib.parse.quote(error_message)
+        return RedirectResponse(
+            url=f"/set_context_form?notification_message={encoded_error}&success=false",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    except Exception as e:
+        error_message = f"❌ Error inesperado: {str(e)}"
+        logger.error(error_message)
+
+        send_windows_notification(
+            "Error Inesperado ❌",
+            str(e)[:100],
+            duration="long"
+        )
+
+        encoded_error = urllib.parse.quote(error_message)
+        return RedirectResponse(
+            url=f"/set_context_form?notification_message={encoded_error}&success=false",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
