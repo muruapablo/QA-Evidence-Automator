@@ -327,11 +327,29 @@ class AzureDevOpsService:
                 f"testplan/Plans/{plan_id}/Suites/{suite_id}/TestCase"
             )
 
+            logger.info(f"Respuesta de API para test cases: {response}")
+
             test_cases = []
             for tc_data in response.get("value", []):
                 try:
+                    logger.info(f"Datos de test case individual: {tc_data}")
+
                     # Obtener detalles completos del test case (con pasos)
-                    tc_id = tc_data.get("testCase", {}).get("id")
+                    # Intentar diferentes estructuras (cloud vs on-premise)
+                    tc_id = None
+
+                    # Estructura cloud: {"testCase": {"id": 123}}
+                    if "testCase" in tc_data:
+                        tc_id = tc_data.get("testCase", {}).get("id")
+                    # Estructura on-premise: {"workItem": {"id": 123}}
+                    elif "workItem" in tc_data:
+                        tc_id = tc_data.get("workItem", {}).get("id")
+                    # Estructura directa: {"id": 123}
+                    elif "id" in tc_data:
+                        tc_id = tc_data.get("id")
+
+                    logger.info(f"ID extraído del test case: {tc_id}")
+
                     if tc_id:
                         full_test_case = self.get_test_case(tc_id)
                         if full_test_case:
