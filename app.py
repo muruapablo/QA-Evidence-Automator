@@ -93,7 +93,11 @@ def send_windows_notification(title: str, message: str, duration: str = "short")
         pass
 
 # Contexto de la prueba actual
-current_test_context = {"testId": "default_test", "step": "default_step"}
+current_test_context = {
+    "testId": "default_test", 
+    "step": "default_step",
+    "description": ""
+}
 
 EVIDENCE_DIR.mkdir(exist_ok=True)
 
@@ -152,18 +156,19 @@ async def set_context_form(request: Request, notification_message: str = "", suc
 
 
 @app.post("/set_context")
-async def set_context(testId: str = Form(...), step: str = Form(...)):
+async def set_context(testId: str = Form(...), step: str = Form(...), description: str = Form("")):
     global current_test_context
     sanitized_testId = sanitize_filename(testId)
     current_test_context["testId"] = sanitized_testId
     current_test_context["step"] = step
+    current_test_context["description"] = description
 
     try:
         test_folder = EVIDENCE_DIR / sanitized_testId
         test_folder.mkdir(exist_ok=True)
         docx_path = test_folder / f"{sanitized_testId}_evidence.docx"
         
-        add_step_table(str(docx_path), str(TEMPLATE_PATH), step, sanitized_testId)
+        add_step_table(str(docx_path), str(TEMPLATE_PATH), step, sanitized_testId, description)
         
     except PermissionError:
         error_message = "❌ Error: Documento abierto. Cerrarlo para continuar."

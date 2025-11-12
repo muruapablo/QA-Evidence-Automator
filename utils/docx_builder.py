@@ -1,9 +1,11 @@
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Pt, RGBColor
 from pathlib import Path
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from copy import deepcopy
+from html.parser import HTMLParser
+import re
 
 def _replace_text_in_paragraph(paragraph, replacements):
     """Reemplaza placeholders en un párrafo."""
@@ -12,6 +14,69 @@ def _replace_text_in_paragraph(paragraph, replacements):
             for run in paragraph.runs:
                 if key in run.text:
                     run.text = run.text.replace(key, value)
+
+
+def _html_to_docx_paragraphs(html_content, document):
+    """Convierte HTML del editor rico a párrafos de Word con formato."""
+    # Remover tags HTML y convertir a texto con formato
+    html_content = html_content.replace('<p>', '\n').replace('</p>', '')
+    html_content = html_content.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
+    
+    # Procesar listas
+    html_content = re.sub(r'<ol[^>]*>', '', html_content)
+    html_content = html_content.replace('</ol>', '')
+    html_content = re.sub(r'<ul[^>]*>', '', html_content)
+    html_content = html_content.replace('</ul>', '')
+    html_content = re.sub(r'<li[^>]*>', '\n• ', html_content)
+    html_content = html_content.replace('</li>', '')
+    
+    # Separar por párrafos
+    paragraphs_text = html_content.split('\n')
+    
+    for para_text in paragraphs_text:
+        if not para_text.strip():
+            continue
+            
+        # Crear párrafo
+        p = document.add_paragraph()
+        
+        # Procesar formato inline (bold, italic, etc.)
+        parts = re.split(r'(<strong>|</strong>|<b>|</b>|<em>|</em>|<i>|</i>|<u>|</u>|<strike>|</strike>)', para_text)
+        
+        bold = False
+        italic = False
+        underline = False
+        strike = False
+        
+        for part in parts:
+            if part in ['<strong>', '<b>']:
+                bold = True
+            elif part in ['</strong>', '</b>']:
+                bold = False
+            elif part in ['<em>', '<i>']:
+                italic = True
+            elif part in ['</em>', '</i>']:
+                italic = False
+            elif part == '<u>':
+                underline = True
+            elif part == '</u>':
+                underline = False
+            elif part == '<strike>':
+                strike = True
+            elif part == '</strike>':
+                strike = False
+            elif part.strip():
+                # Limpiar cualquier tag residual
+                clean_text = re.sub(r'<[^>]+>', '', part)
+                if clean_text.strip():
+                    run = p.add_run(clean_text)
+                    run.bold = bold
+                    run.italic = italic
+                    run.underline = underline
+                    run.font.strike = strike
+                    # Aplicar fuente Calibri
+                    run.font.name = 'Calibri'
+                    run.font.size = Pt(11)
 
 
 def _get_merged_cells_info(source_table):
@@ -126,49 +191,6 @@ def _copy_table_style_and_content(source_table, target_doc):
     return new_table
 
 
-def _copy_paragraph_style_and_content(source_para, target_doc):
-    """Copia un párrafo del template al documento destino."""
-    new_para = target_doc.add_paragraph()
-    new_para.alignment = source_para.alignment
-    new_para.style = source_para.style
-    
-    for run in source_para.runs:
-        new_run = new_para.add_run(run.text)
-        new_run.bold = run.bold
-        new_run.italic = run.italic
-        new_run.underline = run.underline
-        if run.font.size:
-            new_run.font.size = run.font.size
-        if run.font.name:
-            new_run.font.name = run.font.name
-        if run.font.color.rgb:
-            new_run.font.color.rgb = run.font.color.rgb
-    
-    return new_para
-
-
-def _get_descriptive_content_from_template(template_doc):
-    """Obtiene párrafos descriptivos después de la primera tabla."""
-    content_items = []
-    table_found = False
-    
-    for element in template_doc.element.body:
-        if element.tag.endswith('tbl') and not table_found:
-            table_found = True
-            continue
-        
-        if table_found:
-            if element.tag.endswith('p'):
-                for idx, para in enumerate(template_doc.paragraphs):
-                    if para._element == element:
-                        content_items.append(template_doc.paragraphs[idx])
-                        break
-            elif element.tag.endswith('tbl'):
-                break
-    
-    return content_items
-
-
 def add_image_to_docx(docx_path, image_path, template_path, step_desc="", test_case_id=""):
     """Agrega una imagen al documento DOCX copiando la estructura exacta del template."""
     docx_file = Path(docx_path)
@@ -215,8 +237,8 @@ def add_image_to_docx(docx_path, image_path, template_path, step_desc="", test_c
     document.save(docx_path)
 
 
-def add_step_table(docx_path, template_path, step_desc, test_case_id):
-    """Agrega tabla de paso + texto descriptivo usando métodos de python-docx."""
+def add_step_table(docx_path, template_path, step_desc, test_case_id, description_html=""):
+    """Agrega tabla de paso + texto descriptivo personalizado."""
     docx_file = Path(docx_path)
     
     replacements = {
@@ -237,10 +259,9 @@ def add_step_table(docx_path, template_path, step_desc, test_case_id):
                     for paragraph in cell.paragraphs:
                         _replace_text_in_paragraph(paragraph, replacements)
             
-            content_items = _get_descriptive_content_from_template(template_doc)
-            
-            for para in content_items:
-                _copy_paragraph_style_and_content(para, document)
+            # Agregar texto descriptivo personalizado del editor
+            if description_html and description_html.strip():
+                _html_to_docx_paragraphs(description_html, document)
         
         document.save(docx_path)
         
@@ -255,6 +276,10 @@ def add_step_table(docx_path, template_path, step_desc, test_case_id):
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
                         _replace_text_in_paragraph(paragraph, replacements)
+        
+        # Agregar texto descriptivo personalizado del editor
+        if description_html and description_html.strip():
+            _html_to_docx_paragraphs(description_html, document)
         
         document.save(docx_path)
 
