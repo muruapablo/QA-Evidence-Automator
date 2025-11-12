@@ -26,32 +26,67 @@ class AzureDevOpsService:
 
     def __init__(
         self,
-        organization: str,
         project: str,
         personal_access_token: str,
+        organization: Optional[str] = None,
+        server: Optional[str] = None,
+        collection: Optional[str] = None,
         api_version: str = "7.1"
     ):
         """
         Inicializa el cliente de Azure DevOps
 
+        Soporta dos modos:
+        1. Cloud (Azure DevOps Services): Requiere organization
+        2. On-Premise (Azure DevOps Server): Requiere server y collection
+
         Args:
-            organization: Nombre de la organización en Azure DevOps
             project: Nombre del proyecto
             personal_access_token: Personal Access Token (PAT) para autenticación
+            organization: Organización (solo para cloud)
+            server: URL del servidor (solo para on-premise, ej: http://aarcor01apcd750)
+            collection: Collection (solo para on-premise, ej: FCA-DefaultCollection)
             api_version: Versión de la API (por defecto 7.1)
 
         Raises:
             ValueError: Si faltan parámetros requeridos
         """
-        if not all([organization, project, personal_access_token]):
-            raise ValueError("Organization, project y personal_access_token son requeridos")
+        if not project or not personal_access_token:
+            raise ValueError("Project y personal_access_token son requeridos")
 
-        self.organization = organization
+        # Detectar modo: Cloud vs On-Premise
+        is_cloud = organization is not None
+        is_onpremise = server is not None and collection is not None
+
+        if not is_cloud and not is_onpremise:
+            raise ValueError(
+                "Debes configurar: "
+                "(1) organization para cloud, o "
+                "(2) server + collection para on-premise"
+            )
+
+        if is_cloud and is_onpremise:
+            raise ValueError(
+                "Configura solo un modo: cloud (organization) o on-premise (server+collection)"
+            )
+
         self.project = project
         self.api_version = api_version
+        self.is_cloud = is_cloud
 
-        # Base URLs
-        self.base_url = f"https://dev.azure.com/{organization}/{project}"
+        # Construir URL base según el modo
+        if is_cloud:
+            self.organization = organization
+            self.base_url = f"https://dev.azure.com/{organization}/{project}"
+            logger.info(f"AzureDevOpsService (CLOUD) inicializado para {organization}/{project}")
+        else:
+            self.server = server.rstrip('/')  # Remover trailing slash
+            self.collection = collection
+            self.organization = f"{server}/{collection}"  # Para logging
+            # URL pattern: http://server/collection/project/_apis
+            self.base_url = f"{self.server}/{self.collection}/{project}"
+            logger.info(f"AzureDevOpsService (ON-PREMISE) inicializado para {server}/{collection}/{project}")
+
         self.base_api_url = f"{self.base_url}/_apis"
 
         # Configurar autenticación
@@ -59,8 +94,6 @@ class AzureDevOpsService:
 
         # Timeout por defecto (en segundos)
         self.timeout = 30
-
-        logger.info(f"AzureDevOpsService inicializado para {organization}/{project}")
 
     @staticmethod
     def _create_auth_headers(pat: str) -> Dict[str, str]:
@@ -364,32 +397,65 @@ class AzureDevOpsService:
         """
         Crea instancia de AzureDevOpsService desde variables de entorno
 
-        Variables requeridas:
-            - AZURE_DEVOPS_ORG
-            - AZURE_DEVOPS_PROJECT
-            - AZURE_DEVOPS_PAT
+        Detecta automáticamente si es Cloud o On-Premise:
+        - Cloud: Si existe AZURE_DEVOPS_ORG
+        - On-Premise: Si existen AZURE_DEVOPS_SERVER y AZURE_DEVOPS_COLLECTION
 
-        Variables opcionales:
-            - AZURE_DEVOPS_API_VERSION (default: 7.1)
+        Variables comunes:
+            - AZURE_DEVOPS_PROJECT (requerido)
+            - AZURE_DEVOPS_PAT (requerido)
+            - AZURE_DEVOPS_API_VERSION (opcional, default: 7.1)
+
+        Variables Cloud:
+            - AZURE_DEVOPS_ORG (requerido para cloud)
+
+        Variables On-Premise:
+            - AZURE_DEVOPS_SERVER (requerido para on-premise)
+            - AZURE_DEVOPS_COLLECTION (requerido para on-premise)
 
         Returns:
             Instancia de AzureDevOpsService o None si falta configuración
         """
-        org = os.getenv("AZURE_DEVOPS_ORG")
+        # Variables comunes
         project = os.getenv("AZURE_DEVOPS_PROJECT")
         pat = os.getenv("AZURE_DEVOPS_PAT")
         api_version = os.getenv("AZURE_DEVOPS_API_VERSION", "7.1")
 
-        if not all([org, project, pat]):
-            logger.warning("Faltan variables de entorno para Azure DevOps")
+        # Variables específicas
+        org = os.getenv("AZURE_DEVOPS_ORG")
+        server = os.getenv("AZURE_DEVOPS_SERVER")
+        collection = os.getenv("AZURE_DEVOPS_COLLECTION")
+
+        # Validar que existen variables comunes
+        if not project or not pat:
+            logger.warning("Faltan variables de entorno: AZURE_DEVOPS_PROJECT y/o AZURE_DEVOPS_PAT")
             return None
 
-        return cls(
-            organization=org,
-            project=project,
-            personal_access_token=pat,
-            api_version=api_version
-        )
+        # Detectar modo
+        is_cloud = org is not None
+        is_onpremise = server is not None and collection is not None
+
+        if not is_cloud and not is_onpremise:
+            logger.warning(
+                "Configuración incompleta. Define: "
+                "(1) AZURE_DEVOPS_ORG para cloud, o "
+                "(2) AZURE_DEVOPS_SERVER + AZURE_DEVOPS_COLLECTION para on-premise"
+            )
+            return None
+
+        # Crear instancia según modo
+        try:
+            return cls(
+                project=project,
+                personal_access_token=pat,
+                organization=org,
+                server=server,
+                collection=collection,
+                api_version=api_version
+            )
+        except Exception as e:
+            logger.error(f"Error creando AzureDevOpsService: {e}")
+            return None
 
 
 # Singleton global (opcional, para facilitar acceso)
