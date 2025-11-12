@@ -16,9 +16,15 @@ import json
 from winotify import Notification, audio
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
-# Cargar variables de entorno desde .env
-load_dotenv()
+# Obtener el directorio base del proyecto (donde está app.py)
+BASE_DIR_TEMP = Path(__file__).resolve().parent
+
+# Cargar variables de entorno desde .env (especificar ruta absoluta)
+# Esto asegura que se cargue desde el directorio del proyecto, no desde donde se ejecuta Python
+dotenv_path = BASE_DIR_TEMP / '.env'
+load_dotenv(dotenv_path=dotenv_path, override=False)
 
 # Importar servicios de Azure DevOps si está habilitado
 from services.azure_devops_service import (
