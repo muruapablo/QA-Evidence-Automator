@@ -383,8 +383,8 @@ class AzureDevOpsService:
             True si la conexión es exitosa, False en caso contrario
         """
         try:
-            # Intentar obtener información del proyecto
-            self._make_request("GET", "projects")
+            # Intentar obtener test plans (funciona tanto en cloud como on-premise)
+            self._make_request("GET", "testplan/plans")
             logger.info("Conexión con Azure DevOps exitosa")
             return True
 
