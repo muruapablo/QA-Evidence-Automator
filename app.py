@@ -678,13 +678,15 @@ async def set_context_from_azure(test_case_id: int = Form(...)):
         # Convertir a contexto
         context = test_case.to_context_dict()
 
-        # Actualizar contexto global
-        current_test_context["testId"] = context["testId"]
+        # Sanitizar testId ANTES de guardarlo en el contexto global
+        sanitized_testId = sanitize_filename(context["testId"])
+
+        # Actualizar contexto global con testId sanitizado
+        current_test_context["testId"] = sanitized_testId
         current_test_context["step"] = context["step"]
         current_test_context["description"] = context["description"]
 
         # Crear carpeta y documento
-        sanitized_testId = sanitize_filename(context["testId"])
         test_folder = EVIDENCE_DIR / sanitized_testId
         test_folder.mkdir(exist_ok=True)
         docx_path = test_folder / f"{sanitized_testId}_evidence.docx"
